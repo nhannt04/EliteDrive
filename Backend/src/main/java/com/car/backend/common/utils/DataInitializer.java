@@ -15,7 +15,6 @@ import com.car.backend.modules.rental.entity.Rental;
 import com.car.backend.modules.rental.entity.RentalDetail;
 import com.car.backend.modules.rental.enums.RentalStatus;
 import com.car.backend.modules.rental.repository.RentalRepository;
-import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -32,10 +31,7 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Class khởi tạo dữ liệu mẫu khi ứng dụng khởi động

@@ -69,7 +69,7 @@ public class UserService  implements UserDetailsService {
 		User user = userRepository.findByEmail(email)
 				.orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
 
-		String token = UUID.randomUUID().toString();
+		String token = String.format("%06d", random.nextInt(1000000));
 		user.setResetPasswordToken(token);
 		user.setResetTokenExpiry(LocalDateTime.now().plusMinutes(30)); // 30 phút hết hạn
 		userRepository.save(user);
