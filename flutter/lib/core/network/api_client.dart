@@ -70,4 +70,13 @@ class ApiClient {
       body: body != null ? jsonEncode(body) : null,
     );
   }
+
+  static Future<http.Response> delete(String path, {Object? body}) async {
+    final url = Uri.parse('$baseUrl$path');
+    return await http.delete(
+      url,
+      headers: await _headers(),
+      body: body != null ? jsonEncode(body) : null,
+    );
+  }
 }

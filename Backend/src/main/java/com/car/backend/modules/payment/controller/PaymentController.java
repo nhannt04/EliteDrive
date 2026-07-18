@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.env.Environment;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -31,14 +32,42 @@ public class PaymentController {
 
     private final PayOS payOS;
     private final RentalRepository rentalRepository;
+    private final Environment env;
 
     @PostMapping("/create-link/{rentalId}")
     @PreAuthorize("hasRole('CUSTOMER')")
     @Operation(summary = "Create PayOS Payment Link", description = "Create payOS checkout URL for a specific rental booking")
-    public ResponseEntity<?> createPaymentLink(@PathVariable Long rentalId) {
+    public ResponseEntity<?> createPaymentLink(
+            @PathVariable Long rentalId,
+            @RequestHeader(value = "Origin", required = false) String origin,
+            @RequestHeader(value = "Referer", required = false) String referer) {
         try {
             Rental rental = rentalRepository.findById(rentalId)
-                    .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn đặt xe có ID: " + rentalId));
+                    .orElseThrow(() -> new IllegalArgumentException("Đơn thuê không tồn tại"));
+
+            // Xác định base URL của client gọi API
+            String clientBase = "http://localhost:5173"; // default React
+            if (origin != null && !origin.isEmpty()) {
+                clientBase = origin;
+            } else if (referer != null && !referer.isEmpty()) {
+                try {
+                    java.net.URI uri = new java.net.URI(referer);
+                    clientBase = uri.getScheme() + "://" + uri.getAuthority();
+                } catch (Exception ignored) {}
+            }
+
+            // Nếu là React frontend (mặc định ở cổng 5173) thì redirect về đường dẫn payment/success hoặc payment/cancel
+            // Nếu là các port khác (như Flutter Web), quay về trang chủ hoặc cổng tương ứng của nó
+            String returnUrl;
+            String cancelUrl;
+            if (clientBase.contains("5173")) {
+                returnUrl = clientBase + "/payment/success?rentalId=" + rentalId;
+                cancelUrl = clientBase + "/payment/cancel?rentalId=" + rentalId;
+            } else {
+                // Đối với Flutter Web, quay trực tiếp về root của app
+                returnUrl = clientBase + "/?payment=success&rentalId=" + rentalId;
+                cancelUrl = clientBase + "/?payment=cancel&rentalId=" + rentalId;
+            }
 
             if (rental.getStatus() != RentalStatus.PENDING) {
                 return ResponseEntity.badRequest().body(Map.of("message", "Đơn đặt xe đã được xử lý hoặc thanh toán trước đó."));
@@ -55,8 +84,6 @@ public class PaymentController {
                 items.add(item);
             }
 
-            String returnUrl = "http://localhost:5173/payment/success?rentalId=" + rentalId;
-            String cancelUrl = "http://localhost:5173/payment/cancel?rentalId=" + rentalId;
 
             // Tìm một orderCode chưa từng tồn tại trên PayOS cho đơn này (bắt đầu từ rentalId * 1000 + 1)
             long orderCode = rentalId * 1000 + 1;
