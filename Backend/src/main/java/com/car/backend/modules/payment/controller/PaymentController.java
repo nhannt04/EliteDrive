@@ -58,8 +58,26 @@ public class PaymentController {
             String returnUrl = "http://localhost:5173/payment/success?rentalId=" + rentalId;
             String cancelUrl = "http://localhost:5173/payment/cancel?rentalId=" + rentalId;
 
-            // Chuyển orderCode dạng long (sử dụng rentalId làm orderCode)
-            long orderCode = rentalId;
+            // Tìm một orderCode chưa từng tồn tại trên PayOS cho đơn này (bắt đầu từ rentalId * 1000 + 1)
+            long orderCode = rentalId * 1000 + 1;
+            for (int attempt = 1; attempt <= 100; attempt++) {
+                long checkCode = rentalId * 1000 + attempt;
+                try {
+                    PaymentLink info = payOS.paymentRequests().get(checkCode);
+                    // Nếu tồn tại và đang ở trạng thái PENDING, gọi lệnh hủy để đóng giao dịch cũ lại
+                    if (info.getStatus() == PaymentLinkStatus.PENDING) {
+                        try {
+                            payOS.paymentRequests().cancel(checkCode, "Tao lai link thanh toan moi");
+                        } catch (Exception ignored) {}
+                    }
+                } catch (Exception ex) {
+                    // Nếu ném ra ngoại lệ (nghĩa là mã đơn này chưa từng tồn tại trên PayOS), chúng ta có thể sử dụng!
+                    orderCode = checkCode;
+                    break;
+                }
+            }
+
+            log.info("Generating PayOS payment link for rentalId={} with orderCode={}", rentalId, orderCode);
 
             CreatePaymentLinkRequest paymentData = CreatePaymentLinkRequest.builder()
                     .orderCode(orderCode)
@@ -86,10 +104,30 @@ public class PaymentController {
             Rental rental = rentalRepository.findById(rentalId)
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn đặt xe"));
 
-            // Gọi tới PayOS để lấy thông tin trạng thái thanh toán hiện tại
-            PaymentLink paymentInfo = payOS.paymentRequests().get(rentalId);
+            // Duyệt qua các orderCode của các lần thử từ 1 đến 100
+            PaymentLink paymentInfo = null;
+            boolean isPaid = false;
+
+            for (int attempt = 1; attempt <= 100; attempt++) {
+                long checkCode = rentalId * 1000 + attempt;
+                try {
+                    PaymentLink info = payOS.paymentRequests().get(checkCode);
+                    paymentInfo = info;
+                    if (info.getStatus() == PaymentLinkStatus.PAID) {
+                        isPaid = true;
+                        break;
+                    }
+                } catch (Exception ex) {
+                    // Dừng quét khi mã checkCode này chưa từng được sinh ra trên PayOS
+                    break;
+                }
+            }
+
+            if (paymentInfo == null) {
+                return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Không tìm thấy thông tin thanh toán nào trên PayOS."));
+            }
             
-            if (paymentInfo.getStatus() == PaymentLinkStatus.PAID) {
+            if (isPaid) {
                 if (rental.getStatus() == RentalStatus.PENDING) {
                     rental.setStatus(RentalStatus.CONFIRMED);
                     rentalRepository.save(rental);
