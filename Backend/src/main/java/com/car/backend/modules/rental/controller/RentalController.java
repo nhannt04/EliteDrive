@@ -15,6 +15,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -48,7 +49,7 @@ public class RentalController {
 	@Operation(summary = "Get my rentals", description = "Get a paginated list of current user's rentals")
 	public ResponseEntity<Page<RentalResponse>> getMyRentals(
 			@RequestParam(required = false) RentalStatus status,
-			@PageableDefault(size = 10) Pageable pageable,
+			@PageableDefault(size = 10, sort = "createdDate", direction = Sort.Direction.DESC) Pageable pageable,
 			@CurrentUserId Long userId
 	) {
 		return ResponseEntity.ok(
@@ -95,7 +96,7 @@ public class RentalController {
 	@Operation(summary = "Get all rentals", description = "Get all rentals with filters and pagination (Staff/Admin only)")
 	public ResponseEntity<Page<RentalResponse>> getAll(
 			RentalFilterRequest filter,
-			@PageableDefault(size = 10) Pageable pageable
+			@PageableDefault(size = 10, sort = "createdDate", direction = Sort.Direction.DESC) Pageable pageable
 	) {
 		return ResponseEntity.ok(rentalService.getAllRentals(filter, pageable));
 	}

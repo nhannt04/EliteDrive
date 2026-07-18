@@ -24,7 +24,6 @@ public interface RentalRepository extends JpaRepository<Rental, Long> {
         SELECT r FROM Rental r
         WHERE r.customer.userId = :customerId
           AND (:status IS NULL OR r.status = :status)
-        ORDER BY r.createdDate DESC
     """)
 	Page<Rental> findByCustomerWithFilters(
 			@Param("customerId") Long customerId, 
@@ -41,7 +40,6 @@ public interface RentalRepository extends JpaRepository<Rental, Long> {
           AND (:keyword IS NULL
                OR LOWER(r.customer.username) LIKE LOWER(CONCAT('%',:keyword,'%'))
                OR LOWER(r.customer.email)    LIKE LOWER(CONCAT('%',:keyword,'%')))
-        ORDER BY r.createdDate DESC
     """)
 	Page<Rental> findAllWithFilter(
 			@Param("status") RentalStatus status,

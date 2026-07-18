@@ -31,22 +31,36 @@ class Rental {
     this.transmission,
   });
 
+  static String _parseDate(dynamic date) {
+    if (date == null) return '';
+    if (date is String) return date;
+    if (date is List) {
+      if (date.length >= 3) {
+        final year = date[0];
+        final month = date[1].toString().padLeft(2, '0');
+        final day = date[2].toString().padLeft(2, '0');
+        return '$year-$month-$day';
+      }
+    }
+    return date.toString();
+  }
+
   factory Rental.fromJson(Map<String, dynamic> json) {
     return Rental(
-      rentalId: json['rentalId'] ?? 0,
-      customerName: json['customerName'] ?? '',
-      customerEmail: json['customerEmail'] ?? '',
-      startDate: json['startDate'] ?? '',
-      endDate: json['endDate'] ?? '',
-      totalPrice: (json['totalPrice'] as num?)?.toDouble() ?? 0.0,
-      status: json['status'] ?? 'PENDING',
-      createdDate: json['createdDate'] ?? '',
-      carId: json['carId'],
-      carName: json['carName'],
-      brand: json['brand'],
-      thumbnailUrl: json['thumbnailUrl'],
-      seats: json['seats'],
-      transmission: json['transmission'],
+      rentalId: int.tryParse(json['rentalId']?.toString() ?? '') ?? 0,
+      customerName: json['customerName']?.toString() ?? '',
+      customerEmail: json['customerEmail']?.toString() ?? '',
+      startDate: _parseDate(json['startDate']),
+      endDate: _parseDate(json['endDate']),
+      totalPrice: double.tryParse(json['totalPrice']?.toString() ?? '') ?? 0.0,
+      status: json['status']?.toString() ?? 'PENDING',
+      createdDate: _parseDate(json['createdDate']),
+      carId: int.tryParse(json['carId']?.toString() ?? ''),
+      carName: json['carName']?.toString(),
+      brand: json['brand']?.toString(),
+      thumbnailUrl: json['thumbnailUrl']?.toString(),
+      seats: int.tryParse(json['seats']?.toString() ?? ''),
+      transmission: json['transmission']?.toString(),
     );
   }
 }
