@@ -68,23 +68,8 @@ public class EmailServices {
 	
 	public void sendForgotPasswordEmail(String email, String token) {
 		String subject = "EliteDrive - Liên kết đặt lại mật khẩu";
-		String resetLink = "http://localhost:5173/reset-password?token=" + token;
-		
-		String content = """
-                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 30px; border-radius: 12px; background-color: #ffffff; border: 1px solid #eee;">
-                        <h2 style="color: #003366; text-align: center;">Yêu cầu đặt lại mật khẩu</h2>
-                        <p style="font-size: 16px; color: #555;">Chào bạn, chúng tôi nhận được yêu cầu thay đổi mật khẩu của bạn.</p>
-                        <p style="font-size: 16px; color: #555;">Vui lòng nhấn vào liên kết bên dưới để bắt đầu quá trình thiết lập mật khẩu mới:</p>
-                        <div style="text-align: center; margin: 35px 0;">
-                            <a href="%s" style="background-color: #FF8C00; color: white; padding: 14px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">ĐẶT LẠI MẬT KHẨU</a>
-                        </div>
-                        <p style="font-size: 14px; color: #777;">Nếu nút trên không hoạt động, hãy nhấn trực tiếp vào đường link này:</p>
-                        <p style="font-size: 14px; color: #003366; word-break: break-all;"><a href="%s">%s</a></p>
-                        <p style="font-size: 13px; color: #999; margin-top: 30px;">Vì lý do bảo mật, liên kết này sẽ hết hạn sau <strong>30 phút</strong>.</p>
-                    </div>
-                """.formatted(resetLink, resetLink, resetLink);
-		
-		sendEmail(email, subject, content);
+		String message = "Bạn đã yêu cầu đặt lại mật khẩu. Vui lòng sử dụng mã OTP sau để thiết lập mật khẩu mới:";
+		sendOtpEmail(email, token, subject, message);
 	}
 	
 	private void sendOtpEmail(String email, String otpCode, String subject, String message) {
