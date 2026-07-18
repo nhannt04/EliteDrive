@@ -5,6 +5,7 @@ import '../../../core/network/api_client.dart';
 class AuthProvider extends ChangeNotifier {
   bool _isAuthenticated = false;
   bool _isLoading = false;
+  bool _isCheckingAuth = true; // Initially true when app starts
   String? _username;
   String? _fullName;
   String? _avatarUrl;
@@ -12,6 +13,7 @@ class AuthProvider extends ChangeNotifier {
 
   bool get isAuthenticated => _isAuthenticated;
   bool get isLoading => _isLoading;
+  bool get isCheckingAuth => _isCheckingAuth;
   String? get username => _username;
   String? get fullName => _fullName;
   String? get avatarUrl => _avatarUrl;
@@ -19,9 +21,13 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> tryAutoLogin() async {
     final token = await ApiClient.getToken();
-    if (token == null) return;
+    if (token == null) {
+      _isCheckingAuth = false;
+      notifyListeners();
+      return;
+    }
 
-    _isLoading = true;
+    _isCheckingAuth = true;
     notifyListeners();
 
     try {
@@ -43,12 +49,12 @@ class AuthProvider extends ChangeNotifier {
     } catch (e) {
       // Offline/network failure - keep cached state if exists or clear
     } finally {
-      _isLoading = false;
+      _isCheckingAuth = false;
       notifyListeners();
     }
   }
 
-  Future<bool> login(String username, String password) async {
+  Future<String?> login(String username, String password) async {
     _isLoading = true;
     notifyListeners();
 
@@ -68,19 +74,20 @@ class AuthProvider extends ChangeNotifier {
           await ApiClient.saveToken(cleanToken);
           _isAuthenticated = true;
           await tryAutoLogin();
-          return true;
+          return null;
         }
       }
-      return false;
+      final data = jsonDecode(response.body);
+      return data['message'] ?? 'Đăng nhập thất bại';
     } catch (e) {
-      return false;
+      return 'Lỗi kết nối máy chủ';
     } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
 
-  Future<bool> loginWithToken(String token) async {
+  Future<String?> loginWithToken(String token) async {
     _isLoading = true;
     notifyListeners();
 
@@ -89,16 +96,16 @@ class AuthProvider extends ChangeNotifier {
       await ApiClient.saveToken(cleanToken);
       _isAuthenticated = true;
       await tryAutoLogin();
-      return true;
+      return null;
     } catch (e) {
-      return false;
+      return 'Lỗi kết nối máy chủ';
     } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
 
-  Future<bool> register({
+  Future<String?> register({
     required String username,
     required String password,
     required String email,
@@ -123,9 +130,97 @@ class AuthProvider extends ChangeNotifier {
           'identifyId': identifyId,
         },
       );
-      return response.statusCode == 200;
+      if (response.statusCode == 200) return null;
+      final data = jsonDecode(response.body);
+      return data['message'] ?? 'Đăng ký thất bại';
     } catch (e) {
-      return false;
+      return 'Lỗi kết nối máy chủ';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<String?> forgotPassword(String email) async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final response = await ApiClient.post(
+        '/auth/forgot-password',
+        body: {'email': email},
+      );
+      print('API Response Status: ${response.statusCode}');
+      print('API Response Body: ${response.body}');
+      if (response.statusCode == 200) {
+        return null; // Success
+      } else {
+        final data = jsonDecode(response.body);
+        return data['message'] ?? 'Có lỗi xảy ra, vui lòng thử lại.';
+      }
+    } catch (e) {
+      return 'Lỗi kết nối máy chủ.';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<String?> verifyOtp(String email, String otp) async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final int otpCode = int.tryParse(otp) ?? 0;
+      final response = await ApiClient.post(
+        '/auth/verify-otp',
+        body: {'email': email, 'otpCode': otpCode},
+      );
+      if (response.statusCode == 200) return null;
+      final data = jsonDecode(response.body);
+      return data['message'] ?? 'Xác thực OTP thất bại';
+    } catch (e) {
+      return 'Lỗi kết nối máy chủ';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<String?> resetPassword(String token, String newPassword) async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final response = await ApiClient.post(
+        '/auth/reset-password',
+        body: {'token': token, 'newPassword': newPassword},
+      );
+      if (response.statusCode == 200) return null;
+      final data = jsonDecode(response.body);
+      return data['message'] ?? 'Đổi mật khẩu thất bại';
+    } catch (e) {
+      return 'Lỗi kết nối máy chủ';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<String?> changePassword(String oldPassword, String newPassword) async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final response = await ApiClient.post(
+        '/auth/change-password',
+        body: {'oldPassword': oldPassword, 'newPassword': newPassword},
+      );
+      if (response.statusCode == 200) return null;
+      final data = jsonDecode(response.body);
+      return data['message'] ?? 'Đổi mật khẩu thất bại';
+    } catch (e) {
+      return 'Lỗi kết nối máy chủ';
     } finally {
       _isLoading = false;
       notifyListeners();

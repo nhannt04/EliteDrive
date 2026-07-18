@@ -79,4 +79,13 @@ class ApiClient {
       body: body != null ? jsonEncode(body) : null,
     );
   }
+
+  static Future<http.Response> patch(String path, {Object? body}) async {
+    final url = Uri.parse('$baseUrl$path');
+    return await http.patch(
+      url,
+      headers: await _headers(),
+      body: body != null ? jsonEncode(body) : null,
+    );
+  }
 }

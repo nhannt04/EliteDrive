@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../providers/auth_provider.dart';
 import '../../../core/theme/app_theme.dart';
+import 'verify_otp_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -24,6 +25,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _confirmPasswordController = TextEditingController();
   
   bool _agreeToTerms = false;
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
 
   void _submit() async {
     if (!_formKey.currentState!.validate()) return;
@@ -49,7 +52,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final success = await authProvider.register(
+    final errorMessage = await authProvider.register(
       username: _usernameController.text.trim(),
       password: _passwordController.text,
       email: _emailController.text.trim(),
@@ -59,22 +62,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
       identifyId: _identifyIdController.text.trim(),
     );
 
-    if (success) {
+    if (errorMessage == null) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Đăng ký thành công! Bạn có thể đăng nhập.'),
-            backgroundColor: Colors.green,
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => VerifyOtpScreen(email: _emailController.text.trim()),
           ),
         );
-        Navigator.pop(context);
       }
     } else {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Đăng ký thất bại. Tên đăng nhập hoặc email đã tồn tại.'),
-            backgroundColor: Colors.redAccent,
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: Colors.red,
           ),
         );
       }
@@ -300,22 +302,44 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           isDesktop: isDesktop,
                           child1: TextFormField(
                             controller: _passwordController,
-                            obscureText: true,
+                            obscureText: _obscurePassword,
                             style: const TextStyle(color: Colors.black87),
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
                               labelText: 'Mật khẩu',
-                              prefixIcon: Icon(Icons.lock_outline, color: AppTheme.primaryColor),
+                              prefixIcon: const Icon(Icons.lock_outline, color: AppTheme.primaryColor),
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                                  color: Colors.grey,
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    _obscurePassword = !_obscurePassword;
+                                  });
+                                },
+                              ),
                               hintText: '••••••••',
                             ),
                             validator: (val) => val == null || val.length < 6 ? 'Mật khẩu tối thiểu 6 ký tự' : null,
                           ),
                           child2: TextFormField(
                             controller: _confirmPasswordController,
-                            obscureText: true,
+                            obscureText: _obscureConfirmPassword,
                             style: const TextStyle(color: Colors.black87),
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
                               labelText: 'Xác nhận mật khẩu',
-                              prefixIcon: Icon(Icons.lock_outline, color: AppTheme.primaryColor),
+                              prefixIcon: const Icon(Icons.lock_outline, color: AppTheme.primaryColor),
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
+                                  color: Colors.grey,
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    _obscureConfirmPassword = !_obscureConfirmPassword;
+                                  });
+                                },
+                              ),
                               hintText: '••••••••',
                             ),
                             validator: (val) => val == null || val.isEmpty ? 'Vui lòng xác nhận mật khẩu' : null,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import 'register_screen.dart';
+import 'forgot_password_screen.dart';
 import '../../../core/theme/app_theme.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -17,17 +18,18 @@ class _LoginScreenState extends State<LoginScreen> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _rememberMe = false;
+  bool _obscurePassword = true;
 
   void _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final success = await authProvider.login(
+    final errorMessage = await authProvider.login(
       _usernameController.text.trim(),
       _passwordController.text,
     );
 
-    if (success) {
+    if (errorMessage == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -35,13 +37,16 @@ class _LoginScreenState extends State<LoginScreen> {
             backgroundColor: Colors.green,
           ),
         );
+        // Remove any pushed routes (like from Register or Reset Password)
+        // so that the root AuthWrapper can show the MainNavigationScreen.
+        Navigator.popUntil(context, (route) => route.isFirst);
       }
     } else {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Tài khoản hoặc mật khẩu không chính xác.'),
-            backgroundColor: Colors.redAccent,
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: Colors.red,
           ),
         );
       }
@@ -175,11 +180,22 @@ class _LoginScreenState extends State<LoginScreen> {
                         const SizedBox(height: 16),
                         TextFormField(
                           controller: _passwordController,
-                          obscureText: true,
+                          obscureText: _obscurePassword,
                           style: const TextStyle(color: Colors.black87),
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             labelText: 'Mật khẩu',
-                            prefixIcon: Icon(Icons.lock_outline, color: AppTheme.primaryColor),
+                            prefixIcon: const Icon(Icons.lock_outline, color: AppTheme.primaryColor),
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                                color: Colors.grey,
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _obscurePassword = !_obscurePassword;
+                                });
+                              },
+                            ),
                             hintText: '••••••••',
                           ),
                           validator: (val) => val == null || val.isEmpty
@@ -210,7 +226,14 @@ class _LoginScreenState extends State<LoginScreen> {
                               ],
                             ),
                             TextButton(
-                              onPressed: () {},
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const ForgotPasswordScreen(),
+                                  ),
+                                );
+                              },
                               child: const Text(
                                 'Quên mật khẩu?',
                                 style: TextStyle(

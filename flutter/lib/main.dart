@@ -9,6 +9,12 @@ import 'features/fleet/screens/vehicle_listing_screen.dart';
 import 'features/customer/providers/customer_provider.dart';
 import 'features/customer/screens/rental_history_screen.dart';
 import 'features/home/screens/home_screen.dart';
+import 'features/profile/providers/profile_provider.dart';
+import 'features/profile/screens/profile_screen.dart';
+import 'features/profile/screens/change_password_screen.dart';
+import 'features/admin/providers/admin_user_provider.dart';
+import 'features/admin/screens/admin_user_list_screen.dart';
+import 'features/admin/screens/admin_car_list_screen.dart';
 
 void main() {
   runApp(
@@ -17,6 +23,8 @@ void main() {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => FleetProvider()),
         ChangeNotifierProvider(create: (_) => CustomerProvider()),
+        ChangeNotifierProvider(create: (_) => ProfileProvider()),
+        ChangeNotifierProvider(create: (_) => AdminUserProvider()),
       ],
       child: const MyApp(),
     ),
@@ -63,14 +71,14 @@ class _AuthWrapperState extends State<AuthWrapper> {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
 
-    if (auth.isLoading) {
+    if (auth.isCheckingAuth) {
       return const Scaffold(
         body: Center(
           child: CircularProgressIndicator(color: AppTheme.primaryColor),
         ),
       );
     }
-
+    
     if (!auth.isAuthenticated) {
       return const LoginScreen();
     }
@@ -90,26 +98,32 @@ class MainNavigationScreen extends StatefulWidget {
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   late int _selectedIndex;
 
-  late final List<Widget> _screens;
-
   @override
   void initState() {
     super.initState();
     _selectedIndex = widget.initialIndex;
-    _screens = [
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final auth = context.watch<AuthProvider>();
+    // Backend returns roles as list of strings like ["ROLE_ADMIN"]
+    final isAdmin = auth.roles?.contains('ROLE_ADMIN') ?? false;
+
+    final List<Widget> screens = [
       HomeScreen(onNavigateToTab: (index) {
         setState(() {
           _selectedIndex = index;
         });
       }),
       const VehicleListingScreen(),
-      const RentalHistoryScreen(),
+      if (isAdmin) const AdminCarListScreen() else const RentalHistoryScreen(),
+      if (isAdmin) const AdminUserListScreen(),
     ];
-  }
 
-  @override
-  Widget build(BuildContext context) {
-    final auth = context.watch<AuthProvider>();
+    if (_selectedIndex >= screens.length) {
+      _selectedIndex = screens.length - 1;
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -124,6 +138,16 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               onSelected: (value) {
                 if (value == 'logout') {
                   auth.logout();
+                } else if (value == 'dashboard') {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                  );
+                } else if (value == 'settings') {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const ChangePasswordScreen()),
+                  );
                 }
               },
               offset: const Offset(0, 50),
@@ -148,9 +172,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                         style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.textColor, fontSize: 14),
                       ),
                       const SizedBox(height: 2),
-                      const Text(
-                        'Thành viên Premium',
-                        style: TextStyle(color: AppTheme.subTextColor, fontSize: 10),
+                      Text(
+                        isAdmin ? 'Quản trị viên (Admin)' : 'Thành viên Premium',
+                        style: const TextStyle(color: AppTheme.subTextColor, fontSize: 10),
                       ),
                       const SizedBox(height: 8),
                       const Divider(height: 1),
@@ -163,7 +187,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                     children: [
                       Icon(Icons.dashboard_outlined, size: 18, color: AppTheme.subTextColor),
                       SizedBox(width: 12),
-                      Text('Bảng điều khiển', style: TextStyle(fontSize: 13, color: AppTheme.textColor)),
+                      Text('Hồ sơ của tôi', style: TextStyle(fontSize: 13, color: AppTheme.textColor)),
                     ],
                   ),
                 ),
@@ -171,9 +195,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                   value: 'settings',
                   child: Row(
                     children: [
-                      Icon(Icons.settings_outlined, size: 18, color: AppTheme.subTextColor),
+                      Icon(Icons.security_outlined, size: 18, color: AppTheme.subTextColor),
                       SizedBox(width: 12),
-                      Text('Cài đặt', style: TextStyle(fontSize: 13, color: AppTheme.textColor)),
+                      Text('Bảo mật', style: TextStyle(fontSize: 13, color: AppTheme.textColor)),
                     ],
                   ),
                 ),
@@ -196,30 +220,42 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           const SizedBox(width: 12),
         ],
       ),
-      body: _screens[_selectedIndex],
+      body: screens[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         backgroundColor: AppTheme.cardColor,
         selectedItemColor: AppTheme.primaryColor,
         unselectedItemColor: AppTheme.subTextColor,
+        type: BottomNavigationBarType.fixed, // Needed for >3 items
         onTap: (index) {
           setState(() {
             _selectedIndex = index;
           });
         },
-        items: const [
-          BottomNavigationBarItem(
+        items: [
+          const BottomNavigationBarItem(
             icon: Icon(Icons.home),
             label: 'Trang chủ',
           ),
-          BottomNavigationBarItem(
+          const BottomNavigationBarItem(
             icon: Icon(Icons.car_rental),
-            label: 'Đội xe',
+            label: 'Thuê Xe',
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.history),
-            label: 'Lịch sử thuê',
-          ),
+          if (isAdmin)
+            const BottomNavigationBarItem(
+              icon: Icon(Icons.settings_applications),
+              label: 'Q.Lý Xe',
+            )
+          else
+            const BottomNavigationBarItem(
+              icon: Icon(Icons.history),
+              label: 'Lịch sử',
+            ),
+          if (isAdmin)
+            const BottomNavigationBarItem(
+              icon: Icon(Icons.manage_accounts),
+              label: 'Người dùng',
+            ),
         ],
       ),
     );

@@ -87,4 +87,58 @@ class FleetProvider extends ChangeNotifier {
       return false;
     }
   }
+
+  // --- ADMIN FUNCTIONS --- //
+  
+  Future<String?> createCar(Map<String, dynamic> data) async {
+    try {
+      final response = await ApiClient.post('/v1/cars', body: data);
+      if (response.statusCode == 201) {
+        return null;
+      }
+      final decoded = jsonDecode(utf8.decode(response.bodyBytes));
+      return decoded['message'] ?? 'Thêm xe thất bại';
+    } catch (e) {
+      return 'Lỗi hệ thống: $e';
+    }
+  }
+
+  Future<String?> updateCar(int id, Map<String, dynamic> data) async {
+    try {
+      final response = await ApiClient.put('/v1/cars/$id', body: data);
+      if (response.statusCode == 200) {
+        return null;
+      }
+      final decoded = jsonDecode(utf8.decode(response.bodyBytes));
+      return decoded['message'] ?? 'Cập nhật xe thất bại';
+    } catch (e) {
+      return 'Lỗi hệ thống: $e';
+    }
+  }
+
+  Future<String?> updateCarStatus(int id, String status) async {
+    try {
+      final response = await ApiClient.patch('/v1/cars/$id/status?status=$status');
+      if (response.statusCode == 200) {
+        return null;
+      }
+      final decoded = jsonDecode(utf8.decode(response.bodyBytes));
+      return decoded['message'] ?? 'Đổi trạng thái thất bại';
+    } catch (e) {
+      return 'Lỗi hệ thống: $e';
+    }
+  }
+
+  Future<String?> deleteCar(int id) async {
+    try {
+      final response = await ApiClient.delete('/v1/cars/$id');
+      if (response.statusCode == 204 || response.statusCode == 200) {
+        return null;
+      }
+      final decoded = jsonDecode(utf8.decode(response.bodyBytes));
+      return decoded['message'] ?? 'Xóa xe thất bại';
+    } catch (e) {
+      return 'Lỗi hệ thống: $e';
+    }
+  }
 }
