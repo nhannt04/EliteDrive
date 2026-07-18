@@ -15,7 +15,7 @@ import com.car.backend.modules.rental.entity.Rental;
 import com.car.backend.modules.rental.entity.RentalDetail;
 import com.car.backend.modules.rental.enums.RentalStatus;
 import com.car.backend.modules.rental.repository.RentalRepository;
-import com.google.common.base.Optional;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
