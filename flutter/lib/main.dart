@@ -15,6 +15,10 @@ import 'features/profile/screens/change_password_screen.dart';
 import 'features/admin/providers/admin_user_provider.dart';
 import 'features/admin/screens/admin_user_list_screen.dart';
 import 'features/admin/screens/admin_car_list_screen.dart';
+import 'features/staff/providers/staff_rental_provider.dart';
+import 'features/staff/screens/rental_management_screen.dart';
+import 'features/customer/providers/chatbot_provider.dart';
+import 'features/customer/screens/chatbot_screen.dart';
 
 void main() {
   runApp(
@@ -25,6 +29,8 @@ void main() {
         ChangeNotifierProvider(create: (_) => CustomerProvider()),
         ChangeNotifierProvider(create: (_) => ProfileProvider()),
         ChangeNotifierProvider(create: (_) => AdminUserProvider()),
+        ChangeNotifierProvider(create: (_) => StaffRentalProvider()),
+        ChangeNotifierProvider(create: (_) => ChatbotProvider()),
       ],
       child: const MyApp(),
     ),
@@ -107,8 +113,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
-    // Backend returns roles as list of strings like ["ROLE_ADMIN"]
-    final isAdmin = auth.roles?.contains('ROLE_ADMIN') ?? false;
+    final isAdmin = auth.roles.contains('ROLE_ADMIN');
+    final isStaff = auth.roles.contains('ROLE_STAFF');
 
     final List<Widget> screens = [
       HomeScreen(onNavigateToTab: (index) {
@@ -117,7 +123,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         });
       }),
       const VehicleListingScreen(),
-      if (isAdmin) const AdminCarListScreen() else const RentalHistoryScreen(),
+      if (isStaff || isAdmin) const RentalManagementScreen() else const RentalHistoryScreen(),
+      if (isAdmin) const AdminCarListScreen(),
       if (isAdmin) const AdminUserListScreen(),
     ];
 
@@ -133,6 +140,18 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           child: Icon(Icons.directions_car_filled, color: Colors.white, size: 28),
         ),
         actions: [
+          if (auth.isAuthenticated) ...[
+            IconButton(
+              icon: const Icon(Icons.chat_bubble_outline, color: Colors.white),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ChatbotScreen()),
+                );
+              },
+            ),
+            const SizedBox(width: 8),
+          ],
           if (auth.isAuthenticated)
             PopupMenuButton<String>(
               onSelected: (value) {
@@ -173,7 +192,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        isAdmin ? 'Quản trị viên (Admin)' : 'Thành viên Premium',
+                        isAdmin ? 'Quản trị viên (Admin)' : (isStaff ? 'Nhân viên (Staff)' : 'Thành viên Premium'),
                         style: const TextStyle(color: AppTheme.subTextColor, fontSize: 10),
                       ),
                       const SizedBox(height: 8),
@@ -241,15 +260,20 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             icon: Icon(Icons.car_rental),
             label: 'Thuê Xe',
           ),
-          if (isAdmin)
+          if (isStaff || isAdmin)
             const BottomNavigationBarItem(
-              icon: Icon(Icons.settings_applications),
-              label: 'Q.Lý Xe',
+              icon: Icon(Icons.assignment),
+              label: 'Q.Lý Đơn',
             )
           else
             const BottomNavigationBarItem(
               icon: Icon(Icons.history),
               label: 'Lịch sử',
+            ),
+          if (isAdmin)
+            const BottomNavigationBarItem(
+              icon: Icon(Icons.settings_applications),
+              label: 'Q.Lý Xe',
             ),
           if (isAdmin)
             const BottomNavigationBarItem(
